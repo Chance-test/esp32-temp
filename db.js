@@ -1,6 +1,6 @@
 const { Pool } = require("pg");
 
 module.exports = new Pool({
-  connectionString: process.env.DATABASE_URL,
+  connectionString: "postgresql://postgres:admin@localhost:5432/prueba-esp32",
   ssl: { rejectUnauthorized: false }
 });

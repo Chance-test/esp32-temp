@@ -1,0 +1,72 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <title>ESP32 Temperatura</title>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body { font-family: sans-serif; background: #0f172a; color: #e2e8f0; padding: 32px; }
+    h1   { color: #38bdf8; margin-bottom: 4px; }
+    .sub { color: #64748b; font-size: .85rem; margin-bottom: 24px; }
+    .cards { display: flex; gap: 16px; margin-bottom: 28px; flex-wrap: wrap; }
+    .card  { background: #1e293b; border-radius: 12px; padding: 16px 28px; flex: 1; min-width: 120px; }
+    .label { font-size: .75rem; color: #64748b; text-transform: uppercase; }
+    .val   { font-size: 2.2rem; font-weight: 700; margin-top: 4px; }
+    canvas { background: #1e293b; border-radius: 12px; padding: 16px; width: 100% !important; }
+    .dot   { display:inline-block; width:8px; height:8px; border-radius:50%;
+             background:#4ade80; margin-right:6px; animation: pulse 1.5s infinite; }
+    @keyframes pulse { 0%,100%{opacity:1} 50%{opacity:.3} }
+  </style>
+</head>
+<body>
+  <h1>🌡️ ESP32 — DHT22 en vivo</h1>
+  <p class="sub"><span class="dot"></span>Actualizando cada 5 s</p>
+
+  <div class="cards">
+    <div class="card"><div class="label">Temperatura</div><div class="val" style="color:#f87171" id="cTemp">—</div></div>
+    <div class="card"><div class="label">Humedad</div>    <div class="val" style="color:#38bdf8" id="cHum">—</div></div>
+    <div class="card"><div class="label">Lecturas</div>   <div class="val" id="cCount">—</div></div>
+  </div>
+
+  <canvas id="chart" height="90"></canvas>
+
+  <script>
+    const chart = new Chart(document.getElementById('chart').getContext('2d'), {
+      type: 'line',
+      data: {
+        labels: [],
+        datasets: [
+          { label: 'Temperatura °C', data: [], borderColor: '#f87171', backgroundColor: '#f8717120', tension: 0.4, fill: true, pointRadius: 2 },
+          { label: 'Humedad %',      data: [], borderColor: '#38bdf8', backgroundColor: '#38bdf820', tension: 0.4, fill: true, pointRadius: 2 }
+        ]
+      },
+      options: {
+        animation: false,
+        plugins: { legend: { labels: { color: '#e2e8f0' } } },
+        scales: {
+          x: { ticks: { color: '#64748b', maxTicksLimit: 10 }, grid: { color: '#1e293b' } },
+          y: { ticks: { color: '#64748b' }, grid: { color: '#334155' } }
+        }
+      }
+    });
+
+    async function refresh() {
+      const data = (await (await fetch('/api/lecturas')).json()).reverse();
+      if (!data.length) return;
+
+      document.getElementById('cTemp').textContent  = Number(data.at(-1).temperatura).toFixed(1) + ' °C';
+      document.getElementById('cHum').textContent   = Number(data.at(-1).humedad).toFixed(1) + ' %';
+      document.getElementById('cCount').textContent = data.length;
+
+      chart.data.labels              = data.map(d => d.ts.slice(11, 19));
+      chart.data.datasets[0].data    = data.map(d => d.temperatura);
+      chart.data.datasets[1].data    = data.map(d => d.humedad);
+      chart.update();
+    }
+
+    refresh();
+    setInterval(refresh, 5000);
+  </script>
+</body>
+</html>
